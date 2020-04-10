@@ -211,7 +211,7 @@ class TestFileSync(unittest.TestCase):
             b"\r\n",
             b"hello=world&yo=mars",
         )
-        requestMap = corequest.mapFileSync(mockFile)
+        requestMap = corequest.mapFile(mockFile)
         self.assertEqual(requestMap, {
             "method": b"POST",
             "resource": b"/hello.html",
@@ -235,7 +235,7 @@ class TestStreamAsync(unittest.TestCase):
                 b"\r\n",
                 b"hello=world&yo=mars",
             )
-            requestMap = await corequest.mapStreamAsync(mockStream)
+            requestMap = await corequest.mapStream(mockStream)
             self.assertEqual(requestMap, {
                 "method": b"POST",
                 "resource": b"/hello.html",

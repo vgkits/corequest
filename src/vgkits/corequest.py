@@ -82,30 +82,6 @@ def createBodyReceiver(requestMap, debug=False):
             raise BadRequestException("POST not x-www-form-urlencoded")
 
 
-def mapFileSync(clientFile, debug=False):
-    requestMap = dict()
-    headerReceiver = createHeaderReceiver(requestMap, debug)
-    try:
-        headerReceiver.send(None)  # run lines until yield
-        while True:
-            headerReceiver.send(clientFile.readline())  # line value for yield expression
-    except StopIteration as e:
-        pass  # reached end of headers
-
-    bodyReceiver = createBodyReceiver(requestMap, debug)
-    try:
-        bodyReceiver.send(None)  # raise StopIteration, unless bodyReceiver yields
-        contentLength = requestMap["contentLength"]  # bodyReceiver wants body bytes
-        body = clientFile.read(contentLength)  # get body bytes
-        if len(body) != contentLength:  # count the bytes
-            raise Exception("Wrong body length")
-        bodyReceiver.send(body)  # hand over to bodyReceiver
-
-    except StopIteration as e:
-        pass
-    return requestMap
-
-
 def mapSocketSync(clientSocket, debug=False):
     """Consumes bytes from clientSocket interpreting them
     as lines of a HTTP request. Returns a map describing
@@ -113,7 +89,7 @@ def mapSocketSync(clientSocket, debug=False):
     """
     clientFile = clientSocket.makefile('rb', 0)
     try:
-        return mapFileSync(clientFile, debug)
+        return mapFile(clientFile, debug)
     finally:
         import sys
         if hasattr(sys, 'implementation'):  # mpy or py3
@@ -122,30 +98,6 @@ def mapSocketSync(clientSocket, debug=False):
                 pass  # s.makefile() was a no-op, closing file will close socket
             else:
                 clientFile.close()  # file created above should be closed
-
-
-async def mapStreamAsync(clientStream, debug=False):
-    requestMap = dict()
-    headerReceiver = createHeaderReceiver(requestMap, debug)
-    try:
-        headerReceiver.send(None)  # run lines until yield
-        while True:
-            headerReceiver.send(await clientStream.readline())  # line value for yield expression
-    except StopIteration as e:
-        pass  # reached end of headers
-
-    bodyReceiver = createBodyReceiver(requestMap, debug)
-    try:
-        bodyReceiver.send(None)  # raise StopIteration, unless bodyReceiver yields
-        contentLength = requestMap["contentLength"]  # bodyReceiver wants body bytes
-        body = await clientStream.read(contentLength)  # get body bytes
-        if len(body) != contentLength:  # count the bytes
-            raise Exception("Wrong body length")
-        bodyReceiver.send(body)  # hand over to bodyReceiver
-
-    except StopIteration as e:
-        pass
-    return requestMap
 
 
 def createReadReceiver(requestMap, debug=False):
