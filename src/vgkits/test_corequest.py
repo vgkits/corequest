@@ -1,8 +1,9 @@
 from vgkits import corequest
 import unittest
 
+from vgkits.agnostic import asyncio
 
-class MockFile:
+class MockFileSync:
     def __init__(self, *lines):
         self.lines = lines
         self.resetLines()
@@ -17,6 +18,31 @@ class MockFile:
                 self.lineSequence = None
         return ""
     def read(self, byteCount):
+        line = self.readline()
+        if len(line) == byteCount:
+            return line
+        else:
+            raise Exception("Line isn't {} long".format(byteCount))
+
+class MockStreamAsync:
+    def __init__(self, lines):
+        self.lines = lines
+    def __init__(self, *lines):
+        self.lines = lines
+        self.resetLines()
+    def resetLines(self):
+        self.lineSequence = (line for line in self.lines)
+    async def readline(self):
+        await asyncio.sleep(0.01)
+        if self.lineSequence is not None:
+            try:
+                line = next(self.lineSequence)
+                return line
+            except StopIteration:
+                self.lineSequence = None
+        return ""
+    async def read(self, byteCount):
+        await asyncio.sleep(0.01)
         line = self.readline()
         if len(line) == byteCount:
             return line
@@ -157,7 +183,7 @@ class TestBodyReceiver(unittest.TestCase):
 class TestFileSync(unittest.TestCase):
 
     def testPostWithEncodedParams(self):
-        mockFile = MockFile(
+        mockFile = MockFileSync(
             b"POST /hello.html HTTP/1.1\r\n",
             b"Content-Type:application/x-www-form-urlencoded\r\n",
             b"Content-Length:19\r\n",
@@ -176,3 +202,9 @@ class TestFileSync(unittest.TestCase):
                 b"yo": b"mars",
             }
         })
+
+
+"""TODO CH 
+Add synchronous socket test
+    Implement Asynchronous mapSocketAsync and mapStreamAsync functions
+"""

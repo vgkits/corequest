@@ -75,7 +75,7 @@ def createBodyReceiver(requestMap, debug=False):
     if requestMap["method"] == b"POST":
         if (requestMap["contentLength"] > 0 and
                 b"application/x-www-form-urlencoded" in requestMap["contentType"]):
-            postBody = yield  # request body to extract keypairs
+            postBody = yield  # consume body content for keypairs
             if debug:
                 print(postBody)
             requestMap.update(params=extractParams(postBody))
@@ -91,15 +91,19 @@ def mapFileSync(clientFile, debug=False):
         while True:
             headerReceiver.send(clientFile.readline())  # line value for yield expression
     except StopIteration as e:
-        bodyReceiver = createBodyReceiver(requestMap, debug)
-        try:
-            bodyReceiver.send(None)  # raises StopIteration, unless bodyReceiver logic yields
-            contentLength = requestMap["contentLength"]  # bodyReceiver wants body bytes
-            body = clientFile.read(contentLength)  # get body bytes
-            if len(body) == contentLength:  # count the bytes
-                bodyReceiver.send(body)  # hand over to bodyReceiver
-        except StopIteration as e:
-            pass
+        pass # reached end of headers
+
+    bodyReceiver = createBodyReceiver(requestMap, debug)
+    try:
+        bodyReceiver.send(None)  # raise StopIteration, unless bodyReceiver yields
+        contentLength = requestMap["contentLength"]  # bodyReceiver wants body bytes
+        body = clientFile.read(contentLength)  # get body bytes
+        if len(body) != contentLength:  # count the bytes
+            raise Exception("Wrong body length")
+        bodyReceiver.send(body)  # hand over to bodyReceiver
+
+    except StopIteration as e:
+        pass
     return requestMap
 
 
