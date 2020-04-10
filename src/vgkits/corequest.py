@@ -32,7 +32,6 @@ def createHeaderReceiver(requestMap, debug=False):
     """Factory for a generator which accepts HTTP headers line by line via send()
     extracting GET and POST method, path, resource, param and cookie keypairs.
     Generator returns a dict of extracted values"""
-
     while True:
         line = yield  # consider making lowercase before processing
         if debug:
@@ -91,7 +90,7 @@ def mapFileSync(clientFile, debug=False):
         while True:
             headerReceiver.send(clientFile.readline())  # line value for yield expression
     except StopIteration as e:
-        pass # reached end of headers
+        pass  # reached end of headers
 
     bodyReceiver = createBodyReceiver(requestMap, debug)
     try:
@@ -123,3 +122,88 @@ def mapSocketSync(clientSocket, debug=False):
                 pass  # s.makefile() was a no-op, closing file will close socket
             else:
                 clientFile.close()  # file created above should be closed
+
+
+async def mapStreamAsync(clientStream, debug=False):
+    requestMap = dict()
+    headerReceiver = createHeaderReceiver(requestMap, debug)
+    try:
+        headerReceiver.send(None)  # run lines until yield
+        while True:
+            headerReceiver.send(await clientStream.readline())  # line value for yield expression
+    except StopIteration as e:
+        pass  # reached end of headers
+
+    bodyReceiver = createBodyReceiver(requestMap, debug)
+    try:
+        bodyReceiver.send(None)  # raise StopIteration, unless bodyReceiver yields
+        contentLength = requestMap["contentLength"]  # bodyReceiver wants body bytes
+        body = await clientStream.read(contentLength)  # get body bytes
+        if len(body) != contentLength:  # count the bytes
+            raise Exception("Wrong body length")
+        bodyReceiver.send(body)  # hand over to bodyReceiver
+
+    except StopIteration as e:
+        pass
+    return requestMap
+
+
+def createReadReceiver(requestMap, debug=False):
+    headerReceiver = createHeaderReceiver(requestMap, debug)
+    try:
+        headerReceiver.send(None)  # run lines until yield
+        while True:
+            line = yield None  # request line of bytes
+            headerReceiver.send(line)
+    except StopIteration as e:
+        pass  # reached end of headers
+
+    bodyReceiver = createBodyReceiver(requestMap, debug)
+    try:
+        bodyReceiver.send(None)  # raise StopIteration, unless receiver yields (requesting bytes)
+        body = yield requestMap["contentLength"]  # request body bytes
+        bodyReceiver.send(body)
+    except StopIteration as e:
+        pass
+
+    return requestMap
+
+
+def receiveFile(file, readReceiver):
+    """See also receiveStream"""
+    try:
+        count = readReceiver.send(None)  # run to first yield
+        while True:
+            if count is None:
+                count = readReceiver.send(file.readline())
+            else:
+                count = readReceiver.send(file.read(count))
+    except StopIteration:
+        pass
+
+
+def mapFile(file, debug=False):
+    requestMap = dict()
+    readReceiver = createReadReceiver(requestMap, debug)
+    receiveFile(file, readReceiver)
+    return requestMap
+
+
+async def receiveStream(stream, readReceiver):
+    """See also receiveFile"""
+    try:
+        count = readReceiver.send(None)  # run to first yield
+        while True:
+            if count is None:
+                count = readReceiver.send((await stream.readline()))
+            else:
+                count = readReceiver.send((await stream.read(count)))
+    except StopIteration:
+        pass
+
+
+async def mapStream(stream, debug=False):
+    requestMap = dict()
+    readReceiver = createReadReceiver(requestMap, debug)
+    await receiveStream(stream, readReceiver)
+    return requestMap
