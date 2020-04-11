@@ -1,7 +1,9 @@
-from vgkits import corequest
 import unittest
 
 from vgkits.agnostic import asyncio
+from vgkits import corequest
+from vgkits.corequest.sync import mapFile
+from vgkits.corequest.async import mapStream
 
 
 def mapHeaders(*lines):
@@ -121,7 +123,7 @@ class TestHeaderReceiver(unittest.TestCase):
 
     def testStartsReadingHeaders(self):
         try:
-            headerReceiver = corequest.createHeaderReceiver(requestMap={})
+            headerReceiver = corequest.createHeaderReceiver(map={})
             headerReceiver.send(None)
         except StopIteration:
             self.fail("headerReceiver didn't start reading")
@@ -130,7 +132,7 @@ class TestHeaderReceiver(unittest.TestCase):
 
     def testStopsAfterHeaders(self):
         try:
-            headerReceiver = corequest.createHeaderReceiver(requestMap={})
+            headerReceiver = corequest.createHeaderReceiver(map={})
             headerReceiver.send(None)
             headerReceiver.send(b"\r\n")
         except StopIteration:
@@ -211,7 +213,7 @@ class TestFileSync(unittest.TestCase):
             b"\r\n",
             b"hello=world&yo=mars",
         )
-        requestMap = corequest.mapFile(mockFile)
+        requestMap = mapFile(mockFile)
         self.assertEqual(requestMap, {
             "method": b"POST",
             "resource": b"/hello.html",
@@ -235,7 +237,7 @@ class TestStreamAsync(unittest.TestCase):
                 b"\r\n",
                 b"hello=world&yo=mars",
             )
-            requestMap = await corequest.mapStream(mockStream)
+            requestMap = await mapStream(mockStream)
             self.assertEqual(requestMap, {
                 "method": b"POST",
                 "resource": b"/hello.html",
