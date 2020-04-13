@@ -1,9 +1,12 @@
 import unittest
+import socket
+import pickle
+from time import sleep
 
 from vgkits.agnostic import asyncio
 from vgkits import corequest
-from vgkits.corequest.sync import mapFile
-from vgkits.corequest.async import mapStream
+from vgkits.corequest.syncRequests import mapFile, serveSyncRequests
+from vgkits.corequest.asyncRequests import mapReader
 
 
 def mapHeaders(*lines):
@@ -22,6 +25,7 @@ def runAsyncTest(asyncTestFun):
     def handle_exception(loop, context):
         exc = context.get("exception", context["message"])
         raise exc
+
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(handle_exception)
     asyncHandle = asyncTestFun()
@@ -121,7 +125,7 @@ class TestExtractCookies(unittest.TestCase):
 
 class TestHeaderReceiver(unittest.TestCase):
 
-    def testStartsReadingHeaders(self):
+    def testReceiverStarts(self):
         try:
             headerReceiver = corequest.createHeaderReceiver(map={})
             headerReceiver.send(None)
@@ -130,7 +134,7 @@ class TestHeaderReceiver(unittest.TestCase):
         else:
             pass
 
-    def testStopsAfterHeaders(self):
+    def testReceiverStops(self):
         try:
             headerReceiver = corequest.createHeaderReceiver(map={})
             headerReceiver.send(None)
@@ -237,7 +241,7 @@ class TestStreamAsync(unittest.TestCase):
                 b"\r\n",
                 b"hello=world&yo=mars",
             )
-            requestMap = await mapStream(mockStream)
+            requestMap = await mapReader(mockStream)
             self.assertEqual(requestMap, {
                 "method": b"POST",
                 "resource": b"/hello.html",
@@ -253,7 +257,73 @@ class TestStreamAsync(unittest.TestCase):
         return runAsyncTest(asyncTest)
 
 
+class TestSocketSync(unittest.TestCase):
+    def testClientSocket(self):  # TODO CH refactor as contextManager?
+        def makeRequest(lines, callback, port=8080):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.connect((socket.gethostname(), port))
+                requestFile = s.makefile('rwb')
+                try:
+                    requestFile.writelines(lines)
+                    requestFile.flush()
+                    callback(requestFile)
+                finally:
+                    requestFile.close()  # needs to be different on micropython?
+            finally:
+                s.close()
+
+        launched = False
+        # Spawn server in its own thread
+        def notifyServer(addr, port):
+            nonlocal launched
+            launched = True
+
+        def pickleServer():
+            def pickleMapHandler(requestSocket, requestMap):
+                responseFile = requestSocket.makefile('wb')
+                pickle.dump(requestMap, responseFile)
+                responseFile.flush()
+                responseFile.close()
+                raise KeyboardInterrupt # terminate server after handling client
+            try:
+                serveSyncRequests(pickleMapHandler, cb=notifyServer)
+            except KeyboardInterrupt:
+                pass
+
+        import threading
+        serverThread = threading.Thread(target=pickleServer)
+        serverThread.start()
+
+        def checkResponse(responseFile):
+            loaded = pickle.load(responseFile)
+            self.assertEqual(
+                loaded,
+                {
+                    "method": b"GET",
+                    "resource": b"/hello.html",
+                    "path": b"/hello.html",
+                    "cookies": {
+                        b"hello": b"world",
+                        b"yo": b"mars",
+                    }
+                }
+            )
+
+        # Run client in this thread, check server response
+        while not launched:
+            sleep(0)
+            pass
+        makeRequest([
+            b"GET /hello.html HTTP/1.1\r\n",
+            b"Cookie: hello=world;yo=mars\r\n",
+            b"\r\n"
+        ], checkResponse)
+
+
 """TODO CH 
-Add synchronous socket test
-    Implement Asynchronous mapSocketAsync and mapStreamAsync functions
+    Add socket tests, one sync test, the other async
+    Port through server implementations 
+        - generator-based webConsole 
+        - gzipped webrepl
 """
