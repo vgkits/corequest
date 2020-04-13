@@ -260,9 +260,9 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
             cl = None
 
 
-def hostGame(createSequence, port=8080, debug=False):
+def hostGame(createSequence, port=8080, repeat=True, debug=False):
     from vgkits.corequest.syncRequests import serveSyncRequests
-    requestCoroutine = createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=debug)
+    requestCoroutine = createRequestCoroutine(createSequence, repeat=repeat, resetAll=True, debug=debug)
     requestCoroutine.send(None)  # run to first yield
 
     def syncRequestHandler(clFile, requestMap):
@@ -274,9 +274,9 @@ def hostGame(createSequence, port=8080, debug=False):
     serveSyncRequests(syncRequestHandler, port, debug)
 
 
-async def asyncHostGame(createSequence, port=8080, debug=False):
+async def asyncHostGame(createSequence, port=8080, repeat=True, debug=False):
     from vgkits.corequest.asyncRequests import serveAsyncRequests
-    requestCoroutine = createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=debug)
+    requestCoroutine = createRequestCoroutine(createSequence, repeat=repeat, resetAll=True, debug=debug)
     requestCoroutine.send(None)  # run to first yield
 
     async def asyncRequestHandler(clWriter, requestMap):

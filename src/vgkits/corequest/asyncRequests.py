@@ -1,15 +1,21 @@
 from vgkits.agnostic import asyncio
-from vgkits.corequest import createReadReceiver
+from vgkits.corequest import createReadReceiver, WebException, ClientDisconnectException
 
 async def receiveStream(stream, readReceiver):
     """Async/await equivalent of sync#receiveFile"""
+    # TODO add logic aligned with receiveFile -
     try:
         count = readReceiver.send(None)  # run to first yield
         while True:
             if count is None:
-                count = readReceiver.send((await stream.readline()))
+                data = await stream.readline()
             else:
-                count = readReceiver.send((await stream.read(count)))
+                data = await stream.read(count)
+            if data:
+                count = readReceiver.send(data)
+                continue
+            else:
+                raise ClientDisconnectException
     except StopIteration:
         pass
 
@@ -29,6 +35,11 @@ async def serveAsyncRequests(asyncRequestHandler, port=8080, debug=False):
                 print(map)
             await asyncRequestHandler(writer, map)
             await writer.drain()
+        except WebException as we:
+            if isinstance(we, ClientDisconnectException):
+                print("0 bytes received. Stale preconnect?")
+            else:
+                print("{} : ".format(we))
         finally:
             writer.close()
 

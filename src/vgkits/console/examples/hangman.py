@@ -75,16 +75,16 @@ def manLines(parts):
 def gallowsLines(parts):
     """Yields a gallows, with a 'hangman' stick man showing the specified number of body parts. ::
 
-        ________
-        |       |
-        |       |
-        |       O
-        |      /|\
-        |       |
-        |      / \
+        _______
+        |      |
+        |      |
+        |      O
+        |     /|\
+        |      |
+        |     / \
         |
         |
-        |------------
+        |-------
 
     :param parts:
     :return:
