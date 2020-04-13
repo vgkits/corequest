@@ -1,6 +1,8 @@
 from vgkits.corequest import *
 from vgkits.agnostic import asyncio
 
+# TODO CH rely on cl.write binding, pass method reference?
+
 htmlHead = b"""
 <!DOCTYPE html>
 <html>
@@ -286,18 +288,11 @@ async def asyncHostGame(createSequence, port=8080, debug=False):
     await serveAsyncRequests(asyncRequestHandler, port, debug)
 
 
-def createSequence(print):
-    print("Welcome to the game")
-    username = yield "What is your name? "
-    print("Hello " + username)
-    yield "Press enter to restart the game "
-
-
-def syncRun():
+def syncRun(createSequence):
     syncHostGame(createSequence)
 
 
-def asyncRun():
+def asyncRun(createSequence):
     hostCoro = asyncHostGame(createSequence)
     loop = asyncio.get_event_loop()
     loop.create_task(hostCoro)
@@ -305,4 +300,5 @@ def asyncRun():
 
 
 if __name__ == "__main__":
-    asyncRun()
+    from vgkits.console.examples.menu import createSequence
+    asyncRun(createSequence)
