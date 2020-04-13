@@ -296,5 +296,5 @@ def asyncRun(createSequence):
 
 
 if __name__ == "__main__":
-    from vgkits.console.examples.menu import createSequence
-    asyncRun(createSequence)
+    from vgkits.console.examples.menu import menuSequence
+    asyncRun(menuSequence)

@@ -11,7 +11,7 @@ names = (
 lastChoice = None
 
 
-def createSequence(print):
+def menuSequence(print):
     global lastChoice
 
     print("The following games are available:")
@@ -56,7 +56,7 @@ def createSequence(print):
 
 def run():
     from vgkits.console.textConsole import hostGame
-    hostGame(createSequence)
+    hostGame(menuSequence)
 
 
 if __name__ == "__main__":
