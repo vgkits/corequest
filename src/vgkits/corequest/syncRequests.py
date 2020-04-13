@@ -29,6 +29,15 @@ def mapFile(file, debug=False):
     receiveFile(file, readReceiver)
     return requestMap
 
+def closeSocketFile(socketFile):
+    import sys
+    if hasattr(sys, 'implementation'):  # mpy or py3
+        name = sys.implementation.name
+        if name == "micropython" or name == "circuitpython":
+            pass  # s.makefile() was a no-op, closing file will close socket
+        else:
+            socketFile.close()  # file created above should be closed
+
 
 def mapSocketSync(clientSocket, debug=False):
     """Makes blocking reads of the clientSocket, decoding bytes
@@ -38,13 +47,7 @@ def mapSocketSync(clientSocket, debug=False):
     try:
         return mapFile(clientFile, debug)
     finally:
-        import sys
-        if hasattr(sys, 'implementation'):  # mpy or py3
-            name = sys.implementation.name
-            if name == "micropython" or name == "circuitpython":
-                pass  # s.makefile() was a no-op, closing file will close socket
-            else:
-                clientFile.close()  # file created above should be closed
+        closeSocketFile(clientFile)
 
 def completeSyncRequest(cl, syncRequestHandler, debug):
     try:
@@ -53,7 +56,11 @@ def completeSyncRequest(cl, syncRequestHandler, debug):
             raise WebException("Request empty")
         if debug:
             print(map)
-        syncRequestHandler(cl, map)  # pass to request handler
+        clFile = cl.makefile('wb')
+        try:
+            syncRequestHandler(clFile, map)  # pass to request handler
+        finally:
+            closeSocketFile(clFile)
     finally:
         cl.shutdown(socket.SHUT_RDWR)
         cl.close()
@@ -81,5 +88,6 @@ def serveSyncRequests(syncRequestHandler, port=8080, debug=False,
                     print("0 bytes received. Stale preconnect?")
                 else:
                     print("{} : ".format(we) )
+
     finally:
         s.close()

@@ -43,47 +43,47 @@ def decodeuricomponent(string):
 def writeHttpHeaders(cl, status=b"200 OK", contentType=b"text/html", charSet=b"UTF-8"):
     if type(status) is not bytes:
         status = str(status).encode('utf-8')
-    cl.send(b"HTTP/1.1 ")
-    cl.send(status)
-    cl.send(crlf)
-    cl.send(b"Content-Type:")
-    cl.send(contentType)
-    cl.send(b" ; charset=")
-    cl.send(charSet)
-    cl.send(crlf)
-    cl.send(b"Connection: close")
-    cl.send(crlf)
+    cl.write(b"HTTP/1.1 ")
+    cl.write(status)
+    cl.write(crlf)
+    cl.write(b"Content-Type:")
+    cl.write(contentType)
+    cl.write(b" ; charset=")
+    cl.write(charSet)
+    cl.write(crlf)
+    cl.write(b"Connection: close")
+    cl.write(crlf)
 
 
 def writeCookieHeaders(cl, requestMap):
     cookies = requestMap.get("cookies")
     if cookies is not None:
-        cl.send(b"Set-Cookie: ")
+        cl.write(b"Set-Cookie: ")
         comma = False
         for cookieName, cookieValue in cookies.items():
             if comma:
-                cl.send(b",")
-            cl.send(cookieName)
-            cl.send(b"=")
-            cl.send(cookieValue)
+                cl.write(b",")
+            cl.write(cookieName)
+            cl.write(b"=")
+            cl.write(cookieValue)
             comma = True
-        cl.send(crlf)
+        cl.write(crlf)
 
 
 def writeHtmlBegin(cl):
-    cl.send(htmlHead)
-    cl.send(htmlResetForm)
-    cl.send(htmlPreOpen)
+    cl.write(htmlHead)
+    cl.write(htmlResetForm)
+    cl.write(htmlPreOpen)
 
 
 def writeHtmlEnd(cl):
-    cl.send(htmlPreClose)
-    cl.send(htmlResponseForm)
-    cl.send(htmlFoot)
+    cl.write(htmlPreClose)
+    cl.write(htmlResponseForm)
+    cl.write(htmlFoot)
 
 
 def writeItem(cl, obj):
-    cl.send(str(obj).encode('utf-8'))
+    cl.write(str(obj).encode('utf-8'))
 
 
 gameMap = {}
@@ -110,7 +110,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
     if resetAll:
         resetAllGames()
 
-    cl = None  # doprint references this current client socket reference
+    cl = None  # doprint references this writer (file or StreamWriter)
 
     def doprint(*items, sep=b" ", end=b"\n"):
         """Equivalent to print, but writes to current client socket """
@@ -124,7 +124,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
             prev = None
             for item in items:
                 if prev is not None:
-                    cl.send(sep)
+                    cl.write(sep)
                 itemType = type(item)
                 if itemType is str:  # TODO entity encode strings?
                     item = item.encode('utf-8')
@@ -133,9 +133,9 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                 else:
                     raise Exception(
                         'Cannot coerce {} to bytes'.format(itemType))
-                cl.send(item)
+                cl.write(item)
                 prev = item
-            cl.send(end)
+            cl.write(end)
         except OSError as e:
             print(str(e))
 
@@ -203,7 +203,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                 if reset:
                     writeCookieHeaders(cl, requestMap)
 
-                cl.send(crlf)  # finish headers
+                cl.write(crlf)  # finish headers
 
                 writeHtmlBegin(cl)
 
@@ -214,10 +214,10 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                 while True:
                     try:
                         promptAttempts += 1
-                        # coroutine calls doprint closure on cl.send()
+                        # coroutine calls doprint closure on cl.write()
                         prompt = game.send(response)
                         writeItem(cl, prompt)
-                        cl.send(htmlBreak)
+                        cl.write(htmlBreak)
                         break
                     except StopIteration:
                         if repeat:  # create and run the game again
@@ -229,7 +229,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                             else:
                                 raise Exception("Game offered no prompts")
                         else:
-                            cl.send(b"Game Over. Server closing")
+                            cl.write(b"Game Over. Server closing")
                             break
 
                 writeHtmlEnd(cl)
@@ -244,13 +244,13 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
             else:
                 writeHttpHeaders(cl, status=WebException.status)
             writeHtmlBegin(cl)
-            cl.send(b"Error: ")
+            cl.write(b"Error: ")
             if isinstance(e, WebException):
-                cl.send(e.status)
-            cl.send(htmlBreak)
+                cl.write(e.status)
+            cl.write(htmlBreak)
             writeItem(cl, repr(e))
-            cl.send(htmlBreak)
-            cl.send(b"Reset session with X at top-right of this page")
+            cl.write(htmlBreak)
+            cl.write(b"Reset session with X at top-right of this page")
             writeHtmlEnd(cl)
             if not isinstance(e, WebException):
                 raise
@@ -263,9 +263,9 @@ def syncHostGame(createSequence, port=8080, debug=False):
     requestCoroutine = createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=debug)
     requestCoroutine.send(None)  # run to first yield
 
-    def syncRequestHandler(cl, requestMap):
+    def syncRequestHandler(clFile, requestMap):
         try:
-            requestCoroutine.send((cl, requestMap))
+            requestCoroutine.send((clFile, requestMap))
         except StopIteration:
             pass
 
@@ -275,10 +275,11 @@ def syncHostGame(createSequence, port=8080, debug=False):
 async def asyncHostGame(createSequence, port=8080, debug=False):
     from vgkits.corequest.asyncRequests import serveAsyncRequests
     requestCoroutine = createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=debug)
+    requestCoroutine.send(None)  # run to first yield
 
-    async def asyncRequestHandler(cl, requestMap):
+    async def asyncRequestHandler(clWriter, requestMap):
         try:
-            requestCoroutine.send((cl, requestMap))
+            requestCoroutine.send((clWriter, requestMap))
         except StopIteration:
             pass
 
@@ -292,11 +293,16 @@ def createSequence(print):
     yield "Press enter to restart the game "
 
 
-def run():
-    #     syncHostGame(createSequence)
+def syncRun():
+    syncHostGame(createSequence)
+
+
+def asyncRun():
     hostCoro = asyncHostGame(createSequence)
-    asyncio.get_event_loop().run_until_complete(hostCoro)
+    loop = asyncio.get_event_loop()
+    loop.create_task(hostCoro)
+    loop.run_forever()
 
 
 if __name__ == "__main__":
-    run()
+    asyncRun()
