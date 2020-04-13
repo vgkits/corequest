@@ -10,7 +10,7 @@ class NotFoundException(WebException):
     status = b"404 Not Found"
 
 
-# TODO standardise single extractParams with separator args
+# TODO standardise extractParams with separator arg - support queryString OR cookies
 
 def extractParams(query):
     """Splits key-value pairs in GET query strings, POST form-urlencoded bodies"""
@@ -30,6 +30,28 @@ def extractCookies(cookieHeaderValue):
         cookieName, cookieValue = cookiePair.strip().split(b"=")
         cookies[cookieName] = cookieValue
     return cookies
+
+
+def getSessionCookie(requestMap, cookieName=b"session"):
+    cookies = requestMap.get("cookies")
+    if cookies is not None:
+        cookieValue = cookies.get(cookieName)
+        if cookieValue is not None:
+            return cookieValue
+    return None
+
+
+def lazyCreateSessionCookie(requestMap, cookieName=b"session"):
+    from vgkits.random import randint
+    cookies = requestMap.get("cookies")
+    if cookies is None:
+        cookies = {}
+        requestMap["cookies"] = cookies
+    cookieValue = cookies.get(cookieName)
+    if cookieValue is None:
+        cookieValue = str(randint(1000000000)).encode('utf-8')  # todo hardware seeding
+        cookies[cookieName] = cookieValue
+    return cookieValue
 
 
 def createHeaderReceiver(map, debug=False):
@@ -85,7 +107,8 @@ def createBodyReceiver(map, debug=False):
         else:
             raise BadRequestException("POST not x-www-form-urlencoded")
 
-
+# TODO CH head and body receiver into a single readReceiver again
+# now there is a convention of yielding None (should be newline char?) for a readline, number for a read
 def createReadReceiver(map, debug=False):
     headerReceiver = createHeaderReceiver(map, debug)
     try:
@@ -105,6 +128,3 @@ def createReadReceiver(map, debug=False):
         pass
 
     return map
-
-
-
