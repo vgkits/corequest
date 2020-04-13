@@ -48,6 +48,7 @@ spiedLists = {
 
 locations = list(spiedLists.keys())
 
+
 def createSequence(print):
     location = random.pick(locations)
     spiedList = spiedLists[location]
@@ -79,5 +80,4 @@ def run():
 
 
 if __name__ == "__main__":
-    while True:
-        run()
+    run()

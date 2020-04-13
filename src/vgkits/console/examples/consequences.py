@@ -1,5 +1,6 @@
 from time import sleep
 
+
 def createSequence(print):
     manAdjective = yield "Write an adjective for a man? "
     manName = yield "Write a name for a man? "
@@ -12,7 +13,8 @@ def createSequence(print):
     manSaid = yield "What did the man say? "
     womanSaid = yield "What did the woman say? "
     result = yield "What were the consequences? "
-    print(manAdjective + " " + manName + " met " + womanAdjective + " " + womanName + " at " + placeName + " to " + placeReason)
+    print(
+        manAdjective + " " + manName + " met " + womanAdjective + " " + womanName + " at " + placeName + " to " + placeReason)
     sleep(0.5)
     print(manName + " wore " + manWearing)
     sleep(0.5)
@@ -23,3 +25,12 @@ def createSequence(print):
     print(womanName + " said " + womanSaid)
     sleep(0.5)
     print("...and the consequences were " + result)
+
+
+def run():
+    from vgkits.console.textConsole import hostGame
+    hostGame(createSequence)
+
+
+if __name__ == "__main__":
+    run()

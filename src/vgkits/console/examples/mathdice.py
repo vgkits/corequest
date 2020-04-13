@@ -64,3 +64,12 @@ def createSequence(print):
         gc.collect()
     print("Well done, you reached %d in %d turns!" % (target, turn))
     yield "Press Enter to Continue"
+
+
+def run():
+    from vgkits.console.textConsole import hostGame
+    hostGame(createSequence)
+
+
+if __name__ == "__main__":
+    run()

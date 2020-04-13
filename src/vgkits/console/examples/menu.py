@@ -10,6 +10,7 @@ names = (
 
 lastChoice = None
 
+
 def createSequence(print):
     global lastChoice
 
@@ -26,8 +27,8 @@ def createSequence(print):
         if choice == "":
             choice = lastChoice
 
-    choice = choice.lower()             # make lowercase
-    choice = choice.replace(" ", "")    # remove spaces
+    choice = choice.lower()  # make lowercase
+    choice = choice.replace(" ", "")  # remove spaces
 
     if choice == "helloworld":
         from vgkits.console.examples.helloworld import createSequence
@@ -52,6 +53,12 @@ def createSequence(print):
     sequence = createSequence(print)
     yield from sequence
 
-if __name__ == "__main__":
-    from vgkits.console.webConsole import hostGame
+
+def run():
+    from vgkits.console.textConsole import hostGame
     hostGame(createSequence)
+
+
+if __name__ == "__main__":
+    while True:
+        run()

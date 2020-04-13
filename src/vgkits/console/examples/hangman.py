@@ -177,3 +177,11 @@ def createSequence(show):
                     show("The phrase was '" + phrase + "'")
                     yield "You lost! Press enter to reset"
                     return
+
+def run():
+    from vgkits.console.textConsole import hostGame
+    hostGame(createSequence)
+
+
+if __name__ == "__main__":
+    run()
