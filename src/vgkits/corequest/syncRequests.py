@@ -1,12 +1,11 @@
 from vgkits.agnostic import socket, gc
-from vgkits.corequest import createReadReceiver, getSessionCookie, WebException, NotFoundException, BadRequestException, ClientDisconnectException
-import time
+from vgkits.corequest import createReadReceiver, getSessionCookie, WebException, NotFoundException, BadRequestException, \
+    ClientDisconnectException
 
 
 def receiveFile(file, readReceiver):
     """Blocking sync equivalent of async#receiveStream"""
     try:
-        datas = []
         count = readReceiver.send(None)  # run to first yield
         while True:
             if count is None:
@@ -14,7 +13,6 @@ def receiveFile(file, readReceiver):
             else:
                 data = file.read(count)
             if data:
-                datas.append(data)
                 count = readReceiver.send(data)
                 continue
             else:
@@ -28,6 +26,7 @@ def mapFile(file, debug=False):
     readReceiver = createReadReceiver(requestMap, debug)
     receiveFile(file, readReceiver)
     return requestMap
+
 
 def closeSocketFile(socketFile):
     import sys
@@ -49,11 +48,10 @@ def mapSocketSync(clientSocket, debug=False):
     finally:
         closeSocketFile(clientFile)
 
+
 def completeSyncRequest(cl, syncRequestHandler, debug):
     try:
         map = mapSocketSync(cl, debug)  # read headers, post body
-        if map is None or map == {}:
-            raise WebException("Request empty")
         if debug:
             print(map)
         clFile = cl.makefile('wb')
@@ -68,7 +66,6 @@ def completeSyncRequest(cl, syncRequestHandler, debug):
 
 def serveSyncRequests(syncRequestHandler, port=8080, debug=False,
                       cb=lambda addr, port: print("Serving on {}:{} ".format(addr, port))):
-
     s = socket.socket()
     s.settimeout(None)
     try:
@@ -87,7 +84,7 @@ def serveSyncRequests(syncRequestHandler, port=8080, debug=False,
                 if isinstance(we, ClientDisconnectException):
                     print("0 bytes received. Stale preconnect?")
                 else:
-                    print("{} : ".format(we) )
+                    print("{} : ".format(we))
 
     finally:
         s.close()

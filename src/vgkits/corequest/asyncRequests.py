@@ -1,6 +1,5 @@
-from vgkits.agnostic import asyncio, socket, select, gc, sleep_ms
-from vgkits.corequest import createReadReceiver, getSessionCookie, WebException, NotFoundException, BadRequestException
-
+from vgkits.agnostic import asyncio
+from vgkits.corequest import createReadReceiver
 
 async def receiveStream(stream, readReceiver):
     """Async/await equivalent of sync#receiveFile"""
@@ -24,10 +23,13 @@ async def mapReader(reader, debug=False):
 
 async def serveAsyncRequests(asyncRequestHandler, port=8080, debug=False):
     async def clientConnected(reader, writer):
-        map = await mapReader(reader, debug)
-        if debug:
-            print(map)
-        await asyncRequestHandler(writer, map)
-        await writer.drain()
+        try:
+            map = await mapReader(reader, debug)
+            if debug:
+                print(map)
+            await asyncRequestHandler(writer, map)
+            await writer.drain()
+        finally:
+            writer.close()
 
     await asyncio.start_server(clientConnected, port=port, reuse_address=True)
