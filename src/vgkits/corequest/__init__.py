@@ -10,6 +10,10 @@ class NotFoundException(WebException):
     status = b"404 Not Found"
 
 
+class ClientDisconnectException(WebException):
+    status = b"499 Client Closed Request"
+
+
 # TODO standardise extractParams with separator arg - support queryString OR cookies
 
 def extractParams(query):
@@ -54,12 +58,14 @@ def lazyCreateSessionCookie(requestMap, cookieName=b"session"):
     return cookieValue
 
 
-def createHeaderReceiver(map, debug=False):
+# TODO CH head and body receiver into a single readReceiver again
+# now there is a convention of yielding None (should be newline char?) for a readline, number for a read
+def createReadReceiver(map, debug=False):
     """Factory for a generator which accepts HTTP headers line by line via send()
     extracting GET and POST method, path, resource, param and cookie keypairs.
     Generator returns a map of extracted values"""
     while True:
-        line = yield  # consider making lowercase before processing
+        line = yield None # consider making lowercase before processing
         if debug:
             print(line)
         if not line or line == b'\r\n':
@@ -93,38 +99,14 @@ def createHeaderReceiver(map, debug=False):
             except ValueError:
                 pass
 
-    return map
-
-
-def createBodyReceiver(map, debug=False):
     if map["method"] == b"POST":
         if (map["contentLength"] > 0 and
                 b"application/x-www-form-urlencoded" in map["contentType"]):
-            postBody = yield  # consume body content for keypairs
+            postBody = yield map["contentLength"] # consume body content for keypairs
             if debug:
                 print(postBody)
             map.update(params=extractParams(postBody))
         else:
             raise BadRequestException("POST not x-www-form-urlencoded")
-
-# TODO CH head and body receiver into a single readReceiver again
-# now there is a convention of yielding None (should be newline char?) for a readline, number for a read
-def createReadReceiver(map, debug=False):
-    headerReceiver = createHeaderReceiver(map, debug)
-    try:
-        headerReceiver.send(None)  # run lines until yield
-        while True:
-            line = yield None  # request line of bytes
-            headerReceiver.send(line)
-    except StopIteration as e:
-        pass  # reached end of headers
-
-    bodyReceiver = createBodyReceiver(map, debug)
-    try:
-        bodyReceiver.send(None)  # raise StopIteration, unless receiver yields (requesting bytes)
-        body = yield map["contentLength"]  # request body bytes
-        bodyReceiver.send(body)
-    except StopIteration as e:
-        pass
 
     return map

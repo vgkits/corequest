@@ -1,4 +1,5 @@
 from vgkits.corequest import *
+from vgkits.agnostic import asyncio
 
 htmlHead = b"""
 <!DOCTYPE html>
@@ -251,7 +252,8 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
             cl.send(htmlBreak)
             cl.send(b"Reset session with X at top-right of this page")
             writeHtmlEnd(cl)
-            raise
+            if not isinstance(e, WebException):
+                raise
         finally:
             cl = None
 
@@ -259,6 +261,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
 def syncHostGame(createSequence, port=8080, debug=False):
     from vgkits.corequest.syncRequests import serveSyncRequests
     requestCoroutine = createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=debug)
+    requestCoroutine.send(None)  # run to first yield
 
     def syncRequestHandler(cl, requestMap):
         try:
@@ -270,7 +273,7 @@ def syncHostGame(createSequence, port=8080, debug=False):
 
 
 async def asyncHostGame(createSequence, port=8080, debug=False):
-    from vgkits.corequest.async import serveAsyncRequests
+    from vgkits.corequest.asyncRequests import serveAsyncRequests
     requestCoroutine = createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=debug)
 
     async def asyncRequestHandler(cl, requestMap):
@@ -282,14 +285,17 @@ async def asyncHostGame(createSequence, port=8080, debug=False):
     await serveAsyncRequests(asyncRequestHandler, port, debug)
 
 
-def run():
-    def createSequence(print):
-        print("Welcome to the game")
-        username = yield "What is your name? "
-        print("Hello " + username)
-        yield "Press enter to restart the game "
+def createSequence(print):
+    print("Welcome to the game")
+    username = yield "What is your name? "
+    print("Hello " + username)
+    yield "Press enter to restart the game "
 
-    syncHostGame(createSequence)
+
+def run():
+    #     syncHostGame(createSequence)
+    hostCoro = asyncHostGame(createSequence)
+    asyncio.get_event_loop().run_until_complete(hostCoro)
 
 
 if __name__ == "__main__":

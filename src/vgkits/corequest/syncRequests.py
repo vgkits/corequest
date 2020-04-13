@@ -1,17 +1,24 @@
 from vgkits.agnostic import socket, gc
-
-from vgkits.corequest import createReadReceiver, getSessionCookie, WebException, NotFoundException, BadRequestException
+from vgkits.corequest import createReadReceiver, getSessionCookie, WebException, NotFoundException, BadRequestException, ClientDisconnectException
+import time
 
 
 def receiveFile(file, readReceiver):
     """Blocking sync equivalent of async#receiveStream"""
     try:
+        datas = []
         count = readReceiver.send(None)  # run to first yield
         while True:
             if count is None:
-                count = readReceiver.send(file.readline())
+                data = file.readline()
             else:
-                count = readReceiver.send(file.read(count))
+                data = file.read(count)
+            if data:
+                datas.append(data)
+                count = readReceiver.send(data)
+                continue
+            else:
+                raise ClientDisconnectException
     except StopIteration:
         pass
 
@@ -56,6 +63,7 @@ def serveSyncRequests(syncRequestHandler, port=8080, debug=False,
                       cb=lambda addr, port: print("Serving on {}:{} ".format(addr, port))):
 
     s = socket.socket()
+    s.settimeout(None)
     try:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         addr = socket.getaddrinfo('0.0.0.0', port)[0][-1]
@@ -66,6 +74,12 @@ def serveSyncRequests(syncRequestHandler, port=8080, debug=False,
         while True:
             gc.collect()  # clear memory
             cl, addr = s.accept()  # start handling a request
-            completeSyncRequest(cl, syncRequestHandler, debug)
+            try:
+                completeSyncRequest(cl, syncRequestHandler, debug)
+            except WebException as we:
+                if isinstance(we, ClientDisconnectException):
+                    print("0 bytes received. Stale preconnect?")
+                else:
+                    print("{} : ".format(we) )
     finally:
         s.close()

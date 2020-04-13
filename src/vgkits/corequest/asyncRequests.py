@@ -1,4 +1,4 @@
-from vgkits.agnostic import asyncio, socket, select, gc
+from vgkits.agnostic import asyncio, socket, select, gc, sleep_ms
 from vgkits.corequest import createReadReceiver, getSessionCookie, WebException, NotFoundException, BadRequestException
 
 
@@ -15,15 +15,16 @@ async def receiveStream(stream, readReceiver):
         pass
 
 
-async def mapStream(stream, debug=False):
+async def mapReader(reader, debug=False):
     requestMap = dict()
     readReceiver = createReadReceiver(requestMap, debug)
-    await receiveStream(stream, readReceiver)
+    await receiveStream(reader, readReceiver)
     return requestMap
 
 
 async def mapSocketAsync(clientSocket, debug=False):
-    return await mapStream(asyncio.StreamReader(clientSocket), debug)
+    reader = asyncio.StreamReader(clientSocket)
+    return await mapReader(reader, debug)
 
 
 async def completeAsyncRequest(cl, asyncRequestHandler, debug):
@@ -59,6 +60,6 @@ async def serveAsyncRequests(asyncRequestHandler, port=8080, debug=False,
                 asyncio.get_event_loop().create_task(requestCompletion)
             # TODO reduce this ( https://github.com/peterhinch/micropython-async/blob/master/client_server/userver.py )
             # TODO see also listen backlog
-            await asyncio.sleep_ms(200)
+            await sleep_ms(200)
     finally:
         s.close()

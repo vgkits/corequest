@@ -6,7 +6,7 @@ from time import sleep
 from vgkits.agnostic import asyncio
 from vgkits import corequest
 from vgkits.corequest.syncRequests import mapFile, serveSyncRequests
-from vgkits.corequest.asyncRequests import mapStream
+from vgkits.corequest.asyncRequests import mapReader
 
 
 def mapHeaders(*lines):
@@ -241,7 +241,7 @@ class TestStreamAsync(unittest.TestCase):
                 b"\r\n",
                 b"hello=world&yo=mars",
             )
-            requestMap = await mapStream(mockStream)
+            requestMap = await mapReader(mockStream)
             self.assertEqual(requestMap, {
                 "method": b"POST",
                 "resource": b"/hello.html",
