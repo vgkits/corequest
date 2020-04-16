@@ -299,7 +299,7 @@ def createIntroSequence(print):
     from vgkits.console.examples.menu import createMenuSequence
     
     print("Welcome to VGKits' play server")
-    print("Python code available at <a href='https://github.com/vgkits/corequest'>https://github.com/vgkits/corequest</a>")
+    print("Python code available at <a href='https://github.com/vgkits/corequest/tree/master/src/vgkits/console/examples'>Github</a>")
     print()
     print("Follow the instructions below")
     print("Press the cross in the corner of the page to reset your play session")
