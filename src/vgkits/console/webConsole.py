@@ -295,6 +295,18 @@ def asyncRun(createSequence):
     loop.run_forever()
 
 
+def createIntroSequence(print):
+    from vgkits.console.examples.menu import createMenuSequence
+    
+    print("Welcome to VGKits' play server")
+    print("Python code available at <a href='https://github.com/vgkits/corequest'>https://github.com/vgkits/corequest</a>")
+    print()
+    print("Follow the instructions below")
+    print("Press the cross in the corner of the page to reset your play session")
+    print()
+    
+    while True:
+        yield from createMenuSequence(print)
+
 if __name__ == "__main__":
-    from vgkits.console.examples.menu import menuSequence
-    asyncRun(menuSequence)
+    asyncRun(createIntroSequence)

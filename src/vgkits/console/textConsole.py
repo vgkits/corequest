@@ -60,8 +60,8 @@ def hostGame(gameMaker, repeat=False):
 
 
 def run():
-    from vgkits.console.examples.menu import menuSequence
-    hostGame(menuSequence, repeat=True)
+    from vgkits.console.examples.menu import createMenuSequence
+    hostGame(createMenuSequence, repeat=True)
 
 
 if __name__ == "__main__":
