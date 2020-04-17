@@ -172,7 +172,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                         reset = True
                     else:  # interactions with running game are all HTTP POST
                         raise BadRequestException(
-                            "In-progress game: GET request invalid")
+                            "Manually reloaded page. Press enter to resume session")
                 elif method == b"POST":
                     if params is not None:
                         if b"reset" in params:
@@ -246,13 +246,16 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
             else:
                 writeHttpHeaders(cl, status=WebException.status)
             writeHtmlBegin(cl)
-            cl.write(b"Error: ")
-            if isinstance(e, WebException):
+            if isinstance(e, BadRequestException) and e.args:
+                writeItem(cl, e.args[0])
+            else:
+                writeItem(cl, repr(e))
+            cl.write(htmlBreak)
+            cl.write(b"To abandon your session click X in the corner of the page")
+            cl.write(htmlBreak)
+            if isinstance(e, WebException) :
+                cl.write(b"HTTP Error code: ")
                 cl.write(e.status)
-            cl.write(htmlBreak)
-            writeItem(cl, repr(e))
-            cl.write(htmlBreak)
-            cl.write(b"Reset session with X at top-right of this page")
             writeHtmlEnd(cl)
             if not isinstance(e, WebException):
                 raise
@@ -302,7 +305,7 @@ def createIntroSequence(print):
     print("Python code available at <a href='https://github.com/vgkits/corequest/tree/master/src/vgkits/console/examples'>Github</a>")
     print()
     print("Follow the instructions below")
-    print("Press the cross in the corner of the page to reset your play session")
+    print("To abandon a play session, click X in the corner of the page")
     print()
     
     while True:
