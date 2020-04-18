@@ -72,9 +72,9 @@ def createSequence(print):
     yield "Press ENTER to continue: "
 ```
 
-# Blow your mind
+# Advanced
 
-A 'blow your mind' example is shown below. It demonstrates how a [functional chatroom](https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/chat.py) can be implemented in a handful of lines of code. 
+An example for advanced learners is shown below. It demonstrates how a [functional chatroom](https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/chat.py) can be implemented in a handful of lines of code. 
 
 You can play this game and others via the web at http://play.vgkits.org 
 
@@ -138,9 +138,9 @@ which are then invoked by passing them to `hostGame()`. The layers below can be 
 specialised by more advanced developers. 
 
 Under the hood, three layers of coroutine generators...
-a) `send()` HTTP request lines (from a blocking/async socket) to generate a requestMap
+1. `send()` HTTP request lines (from a blocking/async socket) to generate a requestMap
     - fills the role of python's WSGI, but also parsing cookies and parameters
-b) `send()` requestMaps to be handled one by one
+2. `send()` requestMaps to be handled one by one
     - use of the coroutine pattern allows either sync or async server accept
-c) `yield` HTTP response lines to be sent through a blocking or async socket back to the user 
+3. `yield` HTTP response lines to be sent through a blocking or async socket back to the user 
     - confession: this layer will soon be refactored to use python yield syntax. Currently it uses callbacks to a write function
