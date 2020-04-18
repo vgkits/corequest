@@ -1,5 +1,5 @@
 from vgkits.corequest import *
-from vgkits.agnostic import asyncio
+from vgkits.agnostic import asyncio, isMicropython
 
 # TODO translate all write callbacks into yields of a generator 
 
@@ -145,7 +145,11 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
 
     while True:
         cl, requestMap = yield
-        write = cl.write
+        if isMicropython: # StreamWriter async write needs special handling
+            def write(buf):
+                loop.run_until_complete(cl.awrite(buf))
+        else:
+            write = cl.write
 
         try:
             if debug:
