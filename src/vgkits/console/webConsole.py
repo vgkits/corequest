@@ -1,7 +1,7 @@
 from vgkits.corequest import *
-from vgkits.agnostic import asyncio
+from vgkits.agnostic import asyncio, isMicropython
 
-# TODO CH rely on cl.write binding, pass method reference?
+# TODO translate all write callbacks into yields of a generator 
 
 htmlHead = b"""
 <!DOCTYPE html>
@@ -42,50 +42,50 @@ def decodeuricomponent(string):
     return arr[0] + ''.join(arr2)
 
 
-def writeHttpHeaders(cl, status=b"200 OK", contentType=b"text/html", charSet=b"UTF-8"):
+def writeHttpHeaders(write, status=b"200 OK", contentType=b"text/html", charSet=b"UTF-8"):
     if type(status) is not bytes:
         status = str(status).encode('utf-8')
-    cl.write(b"HTTP/1.1 ")
-    cl.write(status)
-    cl.write(crlf)
-    cl.write(b"Content-Type:")
-    cl.write(contentType)
-    cl.write(b" ; charset=")
-    cl.write(charSet)
-    cl.write(crlf)
-    cl.write(b"Connection: close")
-    cl.write(crlf)
+    write(b"HTTP/1.1 ")
+    write(status)
+    write(crlf)
+    write(b"Content-Type:")
+    write(contentType)
+    write(b" ; charset=")
+    write(charSet)
+    write(crlf)
+    write(b"Connection: close")
+    write(crlf)
 
 
-def writeCookieHeaders(cl, requestMap):
+def writeCookieHeaders(write, requestMap):
     cookies = requestMap.get("cookies")
     if cookies is not None:
-        cl.write(b"Set-Cookie: ")
+        write(b"Set-Cookie: ")
         comma = False
         for cookieName, cookieValue in cookies.items():
             if comma:
-                cl.write(b",")
-            cl.write(cookieName)
-            cl.write(b"=")
-            cl.write(cookieValue)
+                write(b",")
+            write(cookieName)
+            write(b"=")
+            write(cookieValue)
             comma = True
-        cl.write(crlf)
+        write(crlf)
 
 
-def writeHtmlBegin(cl):
-    cl.write(htmlHead)
-    cl.write(htmlResetForm)
-    cl.write(htmlPreOpen)
+def writeHtmlBegin(write):
+    write(htmlHead)
+    write(htmlResetForm)
+    write(htmlPreOpen)
 
 
-def writeHtmlEnd(cl):
-    cl.write(htmlPreClose)
-    cl.write(htmlResponseForm)
-    cl.write(htmlFoot)
+def writeHtmlEnd(write):
+    write(htmlPreClose)
+    write(htmlResponseForm)
+    write(htmlFoot)
 
 
-def writeItem(cl, obj):
-    cl.write(str(obj).encode('utf-8'))
+def writeItem(write, obj):
+    write(str(obj).encode('utf-8'))
 
 
 gameMap = {}
@@ -112,7 +112,9 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
     if resetAll:
         resetAllGames()
 
-    cl = None  # doprint references this writer (file or StreamWriter)
+    loop = asyncio.get_event_loop() # TODO CH selectively cache just for async case?
+
+    write = None  # closure for doprint() points to current socket writer (file or StreamWriter)
 
     def doprint(*items, sep=b" ", end=b"\n"):
         """Equivalent to print, but writes to current client socket """
@@ -126,7 +128,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
             prev = None
             for item in items:
                 if prev is not None:
-                    cl.write(sep)
+                    write(sep)
                 itemType = type(item)
                 if itemType is str:  # TODO entity encode strings?
                     item = item.encode('utf-8')
@@ -135,14 +137,19 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                 else:
                     raise Exception(
                         'Cannot coerce {} to bytes'.format(itemType))
-                cl.write(item)
+                write(item)
                 prev = item
-            cl.write(end)
+            write(end)
         except OSError as e:
             print(str(e))
 
     while True:
         cl, requestMap = yield
+        if isMicropython: # StreamWriter async write needs special handling
+            def write(buf):
+                loop.run_until_complete(cl.awrite(buf))
+        else:
+            write = cl.write
 
         try:
             if debug:
@@ -200,14 +207,14 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                         raise BadRequestException(
                             "In-progress game: POST without 'response' param invalid")
 
-                writeHttpHeaders(cl)
+                writeHttpHeaders(write)
 
                 if reset:
-                    writeCookieHeaders(cl, requestMap)
+                    writeCookieHeaders(write, requestMap)
 
-                cl.write(crlf)  # finish headers
+                write(crlf)  # finish headers
 
-                writeHtmlBegin(cl)
+                writeHtmlBegin(write)
 
                 if debug:
                     doprint(str(requestMap))
@@ -216,10 +223,10 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                 while True:
                     try:
                         promptAttempts += 1
-                        # coroutine calls doprint closure on cl.write()
+                        # coroutine calls doprint closure on write()
                         prompt = game.send(response)
-                        writeItem(cl, prompt)
-                        cl.write(htmlBreak)
+                        writeItem(write, prompt)
+                        write(htmlBreak)
                         break
                     except StopIteration:
                         if repeat:  # create and run the game again
@@ -231,10 +238,10 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                             else:
                                 raise Exception("Game offered no prompts")
                         else:
-                            cl.write(b"Game Over. Server closing")
+                            write(b"Game Over. Server closing")
                             break
 
-                writeHtmlEnd(cl)
+                writeHtmlEnd(write)
                 continue
 
             else:  # unknown resource
@@ -242,25 +249,26 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
 
         except Exception as e:  # intercept and write error page
             if isinstance(e, WebException):
-                writeHttpHeaders(cl, status=e.status)
+                writeHttpHeaders(write, status=e.status)
             else:
-                writeHttpHeaders(cl, status=WebException.status)
-            writeHtmlBegin(cl)
+                writeHttpHeaders(write, status=WebException.status)
+            writeHtmlBegin(write)
             if isinstance(e, BadRequestException) and e.args:
-                writeItem(cl, e.args[0])
+                writeItem(write, e.args[0])
             else:
-                writeItem(cl, repr(e))
-            cl.write(htmlBreak)
-            cl.write(b"To abandon your session click X in the corner of the page")
-            cl.write(htmlBreak)
+                writeItem(write, repr(e))
+            write(htmlBreak)
+            write(b"To abandon your session click X in the corner of the page")
+            write(htmlBreak)
             if isinstance(e, WebException) :
-                cl.write(b"HTTP Error code: ")
-                cl.write(e.status)
-            writeHtmlEnd(cl)
+                write(b"HTTP Error code: ")
+                write(e.status)
+            writeHtmlEnd(write)
             if not isinstance(e, WebException):
                 raise
         finally:
             cl = None
+            write = None
 
 
 def hostGame(createSequence, port=8080, repeat=True, debug=False):
