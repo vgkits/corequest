@@ -34,13 +34,13 @@ async def serveAsyncRequests(asyncRequestHandler, port=8080, debug=False):
             if debug:
                 print(map)
             await asyncRequestHandler(writer, map)
-            await writer.drain()
+            # await writer.drain()
         except WebException as we:
             if isinstance(we, ClientDisconnectException):
                 print("0 bytes received. Stale preconnect?")
             else:
                 print("{} : ".format(we))
         finally:
-            writer.close()
+            writer.close() # note, not awaited (wait_closed available since 3.7)
 
-    await asyncio.start_server(clientConnected, port=port, reuse_address=True)
+    await asyncio.start_server(clientConnected, "0.0.0.0", port, backlog=5, reuse_address=True)

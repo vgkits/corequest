@@ -58,12 +58,10 @@ def lazyCreateSessionCookie(requestMap, cookieName=b"session"):
     return cookieValue
 
 
-# TODO CH head and body receiver into a single readReceiver again
-# now there is a convention of yielding None (should be newline char?) for a readline, number for a read
 def createReadReceiver(map, debug=False):
-    """Factory for a generator which accepts HTTP headers line by line via send()
-    extracting GET and POST method, path, resource, param and cookie keypairs.
-    Generator returns a map of extracted values"""
+    """Factory for a generator consuming HTTP headers line by line via send()
+    Generator extracts GET and POST method, path, resource, param and cookie keypairs.
+    returns a map of extracted values"""
     while True:
         line = yield None # consider making lowercase before processing
         if debug:
