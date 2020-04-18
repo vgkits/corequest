@@ -1,8 +1,6 @@
 import sys
 
-isMicropython = sys.implementation.name == "micropython"
-
-if isMicropython:
+if sys.implementation.name == "micropython":
     import uasyncio as asyncio
     sleep_ms = asyncio.sleep_ms
     import usocket as socket

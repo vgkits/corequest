@@ -1,4 +1,4 @@
-from vgkits.agnostic import asyncio, isMicropython
+from vgkits.agnostic import asyncio
 from vgkits.corequest import createReadReceiver, WebException, ClientDisconnectException
 
 async def receiveStream(stream, readReceiver):
@@ -41,12 +41,6 @@ async def serveAsyncRequests(asyncRequestHandler, port=8080, debug=False):
             else:
                 print("{} : ".format(we))
         finally:
-            if isMicropython:
-                await writer.aclose() # note, not awaited (no wait_closed)
-            else:
-                writer.close() # note, not awaited (wait_closed available since 3.7)
+            writer.close() # note, not awaited (wait_closed available since 3.7)
 
-    if isMicropython:
-        await asyncio.start_server(clientConnected, "0.0.0.0", port, backlog=5)
-    else:
-        await asyncio.start_server(clientConnected, "0.0.0.0", port, backlog=5, reuse_address=True)
+    await asyncio.start_server(clientConnected, "0.0.0.0", port, backlog=5, reuse_address=True)
