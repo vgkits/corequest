@@ -1,9 +1,8 @@
 # CoRequest
 
 The CoRequest project makes it easy to write simple text-based games and user interactions in python3 and micropython. 
-CoRequest sequences can run in the terminal or be published as a website. For learners, getting 
-satisfying results to share with friends, family and the world from just a handful of 
-lines of code may act as a stimulus to learn the fundamentals of python3 programming.
+CoRequest sequences can run in the terminal or be published as a website. Making games to share with friends, family 
+and the world from a handful of lines of python3 may act as a stimulus to learn the fundamentals of python3 programming.
 
 The [simplest example](https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/helloworld.py) of a 
 text-based interaction looks like this...
@@ -122,13 +121,13 @@ Among the subjects which can be explored using this demonstration...
 * Why do we need usernames and passwords?
     - exercise: add code for users to secure their accounts with passwords
 * How does user and session management on the web really work? 
-    - host the chatroom with debug=True to dump every web request
+    - host chat.py with debug=True to dump the HTTP Request lines and extracted parameters from each page load
 * Why does user input need escaping to prevent Cross-Site-Scripting?
-    - users can write HTML, CSS and Javascript directly into the page and see the results - this is bad and should be stopped :)
+    - users can post HTML, CSS and Javascript messages which appear raw in the page - this must be stopped! :)
 * How are characters (letters, numbers) encoded?
-    - users can type in HTML Entity codes to choose ASCII codes, or Unicode Emojis! 
+    - users can type in HTML Entity codes to choose ASCII codes, or Unicode Emojis!
 * What is the use of XMLHttpRequest
-    - advanced exercise - update the page when there's a new post available
+    - advanced exercise - make the page auto-update when a new post is made by another user
 
 # Background 
 
