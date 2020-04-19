@@ -1,10 +1,12 @@
 # CoRequest
 
-CoRequest is a python3 and micropython project making it easy to host multi-stage text-input 
-interactions in a a text console or a webpage.
+The CoRequest project makes it easy to write simple text-based games and user interactions in python3 and micropython. 
+CoRequest sequences can run in the terminal or be published as a website. For learners, getting 
+satisfying results to share with friends, family and the world from just a handful of 
+lines of code may act as a stimulus to learn the fundamentals of python3 programming.
 
 The [simplest example](https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/helloworld.py) of a 
-text-based game looks like this...
+text-based interaction looks like this...
 
 ```py
 def createSequence(print):
@@ -14,7 +16,11 @@ def createSequence(print):
     yield "Press enter to restart the game "
 ```
 
-More examples of text games written in CoRequest are at http://play.vgkits.org
+You can play some text games written in CoRequest hosted in our web console at http://play.vgkits.org 
+
+Source code of the playable examples is at https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/
+
+CoRequest's web paradigm can also be used by experienced developers for rapid prototyping of web-based UIs in concurrent Micropython embedded systems.
 
 # Core Principles 
 
@@ -24,7 +30,7 @@ Lines with `yield` prompt the user for input, pausing the running of your game u
 Games authored in this way can be hosted in a text console, or [served as a webpage](https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/helloweb.py).
 
 When published as a webpage, calls to `print()` add lines of text to the page. 
-Lines with `yield` causes the page to be finalised and sent to the user, including an input box to await their response.
+Lines with `yield` causes the page to be finalised and sent to the user, including an input box to await their response, while the session waits to resume your code.
 
 The play.vgkits.org server runs python 3, but can also run in Micropython, like...
 
@@ -32,9 +38,9 @@ The play.vgkits.org server runs python 3, but can also run in Micropython, like.
 micropython -m vgkits.console.webConsole
 ```
 
-# Complex Example
+# Game Example
 
-A more complex example is shown below, which implements a [playable 'I Spy' guessing game](https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/ispy.py). You can play this game and others via the web at http://play.vgkits.org
+A more complex game is shown below, which implements a [playable 'I Spy' guessing game](https://github.com/vgkits/corequest/blob/master/src/vgkits/console/examples/ispy.py). You can play this game and others via the web at http://play.vgkits.org
 
 
 ```py
