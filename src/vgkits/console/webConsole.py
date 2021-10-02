@@ -78,9 +78,10 @@ def writeHtmlBegin(write):
     write(htmlPreOpen)
 
 
-def writeHtmlEnd(write):
+def writeHtmlEnd(write, showForm=True):
     write(htmlPreClose)
-    write(htmlResponseForm)
+    if showForm:
+        write(htmlResponseForm)
     write(htmlFoot)
 
 
@@ -225,8 +226,9 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                         promptAttempts += 1
                         # coroutine calls doprint closure on write()
                         prompt = game.send(response)
-                        writeItem(write, prompt)
-                        write(htmlBreak)
+                        if prompt is not None:
+                            writeItem(write, prompt)
+                            write(htmlBreak)
                         break
                     except StopIteration:
                         if repeat:  # create and run the game again
@@ -241,7 +243,7 @@ def createRequestCoroutine(createSequence, repeat=True, resetAll=True, debug=Fal
                             write(b"Game Over. Server closing")
                             break
 
-                writeHtmlEnd(write)
+                writeHtmlEnd(write, showForm=(prompt is not None))
                 continue
 
             else:  # unknown resource
